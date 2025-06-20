@@ -128,10 +128,16 @@ def show_register():
         else:
             payload = {"email": email, "password": pwd, "role": role, "username": username}
             resp = requests.post(f"{API_BASE}/auth/register", json=payload)
-            if resp.status_code == 201:
-                st.success("Registration accepted — check your email to confirm.")
-            else:
-                st.error(f"Registration failed: {resp.json()}")
+                if resp.status_code == 201:
+    st.success("Registration accepted — check your email to confirm.")
+else:
+    # Robust error parsing
+    try:
+        err_detail = resp.json()
+    except Exception:
+        err_detail = resp.text
+    st.error(f"Registration failed: {err_detail}")
+
 
 def show_confirm():
     show_logo()
