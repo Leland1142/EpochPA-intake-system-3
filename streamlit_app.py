@@ -4,9 +4,8 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# ====== GLOBAL CONFIGURATION ======
 API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000/intake")
-LOGO_PATH = "epochpa_logo.png"  # Place your logo file in the root directory
+LOGO_PATH = "epochpa_logo.png"
 
 st.set_page_config(page_title="EpochPA", page_icon="🏥", layout="wide")
 
@@ -14,31 +13,20 @@ def show_logo():
     try:
         st.image(LOGO_PATH, width=180)
     except Exception:
-        st.write(":hospital:")  # Fallback if logo not found
+        st.write(":hospital:")
 
-# ====== SIDEBAR NAVIGATION ======
+# SIDEBAR NAVIGATION
 st.sidebar.title("EpochPA")
 show_logo()
 st.sidebar.subheader("Authentication")
 
-auth_page = st.sidebar.radio(
-    "Go to:",
-    ["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"],
-    index=0,
-    key="auth_nav"
-)
+# Sidebar state
+if "auth_page" not in st.session_state:
+    st.session_state["auth_page"] = "🔐 Login Page"
+if "dash_page" not in st.session_state:
+    st.session_state["dash_page"] = "🛠️ Admin Dashboard"
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("Dashboards")
-
-dash_page = st.sidebar.radio(
-    "Go to:",
-    ["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"],
-    index=0,
-    key="dash_nav"
-)
-
-# ====== SESSION STATE ======
+# Session State Defaults
 if "logged_provider" not in st.session_state:
     st.session_state.logged_provider = False
     st.session_state.logged_rep = False
@@ -46,9 +34,22 @@ if "logged_provider" not in st.session_state:
     st.session_state.email = None
     st.session_state.role = None
     st.session_state.username = None
-    st.session_state.rep_last_seen = dict()  # {username: last_seen_iso}
+    st.session_state.rep_last_seen = dict()
 
-# ====== HELPERS ======
+# Sidebar radios
+auth_page = st.sidebar.radio(
+    "Go to:",
+    ["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"],
+    index=["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"].index(st.session_state["auth_page"]),
+    key="auth_nav"
+)
+dash_page = st.sidebar.radio(
+    "Go to:",
+    ["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"],
+    index=["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"].index(st.session_state["dash_page"]),
+    key="dash_nav"
+)
+
 def show_status_timeline(status_history):
     st.markdown("**Status Timeline:**")
     for item in status_history:
@@ -66,66 +67,52 @@ def compute_turnaround(sub):
 def status_count(subs):
     return pd.Series([s["status"] for s in subs]).value_counts() if subs else pd.Series()
 
-# ====== AUTH/LOGIN PAGES ======
 def show_login():
     show_logo()
     st.title("🔐 EpochPA Login")
+    # --- Register Now button ---
+    if st.button("Register Now"):
+        st.session_state["auth_page"] = "📝 Register Page"
+        st.rerun()
     username = st.text_input("Username (for rep/provider login)")
     pwd = st.text_input("Password", type="password")
     role = st.selectbox("Login as...", ["provider", "rep", "admin"])
 
     if st.button("Login"):
-        # Replace with real backend auth!
-        payload = {"email": username, "password": pwd}
-        try:
-            resp = requests.post(f"{API_BASE}/auth/login", json=payload)
-            if resp.status_code == 200:
-                data = resp.json()
-                st.session_state.username = username
-                st.session_state.email = username
-                st.session_state.logged_provider = role == "provider"
-                st.session_state.logged_rep = role == "rep"
-                st.session_state.logged_admin = role == "admin"
-                st.session_state.role = role
-                st.session_state["availity_token"] = data.get("availity_access_token")
-                st.success(f"Logged in as {role} ({username})")
-                # Store login time for rep notifications
-                if role == "rep":
-                    st.session_state.rep_last_seen[username] = datetime.utcnow().isoformat()
-            else:
-                st.error(resp.json().get("detail", "Login failed."))
-        except Exception as e:
-            st.error(f"Login error: {e}")
-        return
-
-
-    with st.expander("🔑 Demo Login (skip backend)"):
-        col1, col2, col3 = st.columns(3)
-        if col1.button("Demo as Provider"):
-            st.session_state.username = "provider1"
-            st.session_state.logged_provider = True
-            st.session_state.logged_rep = False
-            st.session_state.logged_admin = False
-            st.session_state.role = "provider"
-            st.success("Logged in as provider (demo)")
-            return
-        if col2.button("Demo as Rep"):
-            st.session_state.username = "rep1"
-            st.session_state.logged_provider = False
-            st.session_state.logged_rep = True
-            st.session_state.logged_admin = False
-            st.session_state.role = "rep"
-            st.success("Logged in as rep (demo)")
-            st.session_state.rep_last_seen["rep1"] = datetime.utcnow().isoformat()
-            return
-        if col3.button("Demo as Admin"):
-            st.session_state.username = "admin1"
-            st.session_state.logged_provider = False
-            st.session_state.logged_rep = False
+        # Hardcoded admin credentials
+        if username == "leland.paul@epochpa.com" and pwd == "Takeoff#11" and role == "admin":
+            st.session_state.username = username
             st.session_state.logged_admin = True
+            st.session_state.logged_rep = False
+            st.session_state.logged_provider = False
             st.session_state.role = "admin"
-            st.success("Logged in as admin (demo)")
-            return
+            st.success("Admin login successful.")
+            st.session_state["dash_page"] = "🛠️ Admin Dashboard"
+            st.rerun()
+        else:
+            payload = {"email": username, "password": pwd}
+            try:
+                resp = requests.post(f"{API_BASE}/auth/login", json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    st.session_state.username = username
+                    st.session_state.email = username
+                    st.session_state.logged_provider = role == "provider"
+                    st.session_state.logged_rep = role == "rep"
+                    st.session_state.logged_admin = role == "admin"
+                    st.session_state.role = role
+                    st.session_state["availity_token"] = data.get("availity_access_token")
+                    st.success(f"Logged in as {role} ({username})")
+                    if role == "rep":
+                        st.session_state.rep_last_seen[username] = datetime.utcnow().isoformat()
+                    if role == "admin":
+                        st.session_state["dash_page"] = "🛠️ Admin Dashboard"
+                        st.rerun()
+                else:
+                    st.error(resp.json().get("detail", "Login failed."))
+            except Exception as e:
+                st.error(f"Login error: {e}")
+        return
 
 def show_register():
     show_logo()
@@ -146,7 +133,6 @@ def show_register():
             else:
                 st.error(f"Registration failed: {resp.json()}")
 
-
 def show_confirm():
     show_logo()
     st.title("🔒 Confirm Email")
@@ -158,8 +144,6 @@ def show_confirm():
         else:
             st.error(f"Confirmation failed: {resp.json()}")
 
-# ====== PROVIDER DASHBOARD ======
-# ====== PROVIDER DASHBOARD ======
 def show_provider():
     show_logo()
     if not st.session_state.logged_provider:
@@ -167,10 +151,8 @@ def show_provider():
         return
 
     st.title("👨‍⚕️ Provider Dashboard")
-
-    # --- New: PA Submission Form at Top ---
     st.header("Submit a New PA Request")
-    provider_npi = st.session_state.username  # For demo, use username as NPI
+    provider_npi = st.session_state.username
 
     with st.form("submit_pa_form", clear_on_submit=True):
         patient_name = st.text_input("Patient Name", "")
@@ -197,7 +179,7 @@ def show_provider():
                 resp = requests.post(f"{API_BASE}/submit", json=payload)
                 if resp.status_code == 201:
                     st.success("PA request submitted successfully.")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error(f"Failed to submit PA request: {resp.text}")
             except Exception as e:
@@ -205,7 +187,6 @@ def show_provider():
 
     st.markdown("---")
     st.subheader("Your PA Analytics")
-
     try:
         headers = {"Authorization": f"Bearer demo-token"}
         resp = requests.get(f"{API_BASE}/list", headers=headers)
@@ -214,13 +195,11 @@ def show_provider():
         st.error(f"Error loading submissions: {e}")
         return
 
-    # Filter by provider (NPI/username)
     my_submissions = [s for s in submissions if s["provider_npi"] == provider_npi]
     if not my_submissions:
         st.info("No PA requests submitted yet.")
         return
 
-    # Analytics
     status_counts = status_count(my_submissions)
     completed = [s for s in my_submissions if s["status"] in ["Approved", "Denied"]]
     avg_turn = pd.Series([compute_turnaround(s) for s in completed if compute_turnaround(s) is not None]).mean()
@@ -249,9 +228,18 @@ def show_provider():
                     st.success(f"Uploaded {f.name}")
                 else:
                     st.error(f"Failed to upload {f.name}: {resp.text}")
+        # ----- SHOW ELIGIBILITY INFO (read-only for providers) -----
+        st.subheader("Eligibility Verification (for this PA request)")
+        st.write(f"Checked: {sub.get('eligibility_checked', False)}")
+        st.write(f"Method: {sub.get('eligibility_method', '')}")
+        st.write(f"Notes: {sub.get('eligibility_notes', '')}")
+        evidence = sub.get("eligibility_evidence", [])
+        if evidence:
+            st.write("Eligibility Documents:")
+            for doc in evidence:
+                st.write(f"- {doc.get('filename', '')}")
         st.write("---")
 
-    # Export tools
     if st.button("Download My PA Requests (CSV)"):
         df = pd.DataFrame(my_submissions)
         df.to_csv("my_pas.csv", index=False)
@@ -263,8 +251,6 @@ def show_provider():
         with open("my_pas.xlsx", "rb") as f:
             st.download_button("Download Excel", f, file_name="my_pas.xlsx")
 
-
-# ====== REP DASHBOARD ======
 def show_rep():
     show_logo()
     if not st.session_state.logged_rep:
@@ -272,7 +258,6 @@ def show_rep():
         return
     st.title("👥 Rep Dashboard")
     username = st.session_state.username
-    # --- Rep sees only their assigned submissions ---
     try:
         resp = requests.get(f"{API_BASE}/list")
         submissions = resp.json().get("submissions", [])
@@ -280,13 +265,11 @@ def show_rep():
         st.error(f"Error loading submissions: {e}")
         return
     my_submissions = [s for s in submissions if s.get("assigned_rep") == username]
-    # --- Notification for new assignments ---
     last_seen = st.session_state.rep_last_seen.get(username)
     new_since = []
     if last_seen:
         last_seen_dt = pd.to_datetime(last_seen)
         new_since = [s["id"] for s in my_submissions if pd.to_datetime(s["status_history"][0]["timestamp"]) > last_seen_dt]
-    # --- Rep analytics ---
     completed = [s for s in my_submissions if s["status"] in ["Approved", "Denied"]]
     avg_turn = pd.Series([compute_turnaround(s) for s in completed if compute_turnaround(s) is not None]).mean()
     status_counts = status_count(my_submissions)
@@ -296,7 +279,6 @@ def show_rep():
     col3.metric("Avg Turnaround (hrs)", f"{avg_turn:.1f}" if avg_turn else "N/A")
     st.bar_chart(status_counts)
     st.markdown("---")
-    # --- Bulk status update ---
     if my_submissions:
         st.subheader("Bulk Status Update")
         options = {f"{s['patient_name']} ({s['id']})": s['id'] for s in my_submissions}
@@ -312,9 +294,8 @@ def show_rep():
                         data={"submission_id": pa_id, "new_status": new_status, "notes": notes}
                     )
                 st.success(f"Updated {len(selected_ids)} requests.")
-                st.experimental_rerun()
+                st.rerun()
         st.markdown("---")
-    # --- Table with notification for new assignments ---
     for sub in my_submissions:
         is_new = sub["id"] in new_since
         sub_title = f"#### Submission ID: `{sub['id']}` | Patient: {sub['patient_name']}"
@@ -324,6 +305,54 @@ def show_rep():
         st.write(f"**Provider NPI:** {sub['provider_npi']}")
         st.write(f"**Current Status:** {sub['status']}")
         show_status_timeline(sub["status_history"])
+        # ----- MANUAL ELIGIBILITY SECTION -----
+        st.markdown("#### Manual Eligibility Update")
+        eligibility_checked = sub.get("eligibility_checked", False)
+        eligibility_method = sub.get("eligibility_method", "")
+        eligibility_notes = sub.get("eligibility_notes", "")
+        eligibility_evidence = sub.get("eligibility_evidence", [])
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            checked = st.checkbox("Eligibility Checked?", value=eligibility_checked, key=f"checked_{sub['id']}")
+            method = st.selectbox(
+                "Eligibility Method",
+                ["", "Availity", "Phone", "Fax", "Online Portal", "Other"],
+                index=["", "Availity", "Phone", "Fax", "Online Portal", "Other"].index(eligibility_method) if eligibility_method in ["Availity", "Phone", "Fax", "Online Portal", "Other"] else 0,
+                key=f"method_{sub['id']}"
+            )
+        with col2:
+            notes = st.text_area("Eligibility Notes", value=eligibility_notes, height=80, key=f"notes_{sub['id']}")
+        uploaded_files = st.file_uploader(
+            "Upload Eligibility Evidence",
+            accept_multiple_files=True,
+            key=f"evidence_{sub['id']}"
+        )
+        if st.button("Save Eligibility Info", key=f"save_elig_{sub['id']}"):
+            payload = {
+                "submission_id": sub["id"],
+                "eligibility_checked": checked,
+                "eligibility_method": method,
+                "eligibility_notes": notes,
+            }
+            for file in uploaded_files:
+                files = {"file": (file.name, file.getvalue())}
+                data = {"submission_id": sub["id"]}
+                resp = requests.post(f"{API_BASE}/upload-doc", files=files, data=data)
+                if resp.status_code == 200:
+                    st.success(f"Uploaded {file.name}")
+                else:
+                    st.error(f"Failed to upload {file.name}: {resp.text}")
+            resp = requests.post(f"{API_BASE}/update-eligibility", json=payload)
+            if resp.status_code == 200:
+                st.success("Eligibility info updated!")
+            else:
+                st.error(f"Update failed: {resp.text}")
+        if eligibility_evidence:
+            st.write("Uploaded Eligibility Documents:")
+            for doc in eligibility_evidence:
+                st.write(f"- {doc['filename']}")
+        st.write("---")
+        # ----- END MANUAL ELIGIBILITY SECTION -----
         new_status = st.selectbox(
             f"Update status for {sub['id']}",
             ["Submitted", "In Review", "Approved", "Denied"],
@@ -338,11 +367,10 @@ def show_rep():
             )
             if resp.status_code == 200:
                 st.success("Status updated!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Failed to update status.")
         st.write("---")
-    # --- Export Tools ---
     if my_submissions:
         if st.button("Download My PA Requests (CSV)"):
             df = pd.DataFrame(my_submissions)
@@ -355,21 +383,18 @@ def show_rep():
             with open(f"rep_{username}_pas.xlsx", "rb") as f:
                 st.download_button("Download Excel", f, file_name=f"rep_{username}_pas.xlsx")
 
-# ====== ADMIN DASHBOARD ======
 def show_admin():
     show_logo()
     if not st.session_state.logged_admin:
         st.warning("Please log in as admin first.")
         return
     st.title("🛠️ Admin Dashboard")
-    # Fetch all reps for assignment (simulate, or use real endpoint later)
     try:
         resp = requests.get(f"{API_BASE}/list")
         submissions = resp.json().get("submissions", [])
     except Exception as e:
         st.error(f"Error loading submissions: {e}")
         return
-    # --- ANALYTICS/STATISTICS ---
     df = pd.DataFrame(submissions)
     st.subheader("📊 PA Analytics Snapshot")
     total = len(df)
@@ -385,26 +410,14 @@ def show_admin():
     st.bar_chart(by_rep)
     st.markdown("#### PAs by Provider")
     st.bar_chart(by_provider)
-    # Optional: avg turnaround time for completed
+
     def get_turnaround(row):
         times = [x for x in row.get("status_history", []) if x["status"] in ["Approved", "Denied"]]
         if not times:
             return None
         start = pd.to_datetime(row["status_history"][0]["timestamp"])
         end = pd.to_datetime(times[-1]["timestamp"])
-        return (end - start).total_seconds() / 3600  # hours
-
-# ===== Part 2: Continue/Complete Streamlit App (after truncation) =====
-
-# ====== CONTINUED ADMIN DASHBOARD (after analytics snapshot) ======
-    # Optional: avg turnaround time for completed
-    def get_turnaround(row):
-        times = [x for x in row.get("status_history", []) if x["status"] in ["Approved", "Denied"]]
-        if not times:
-            return None
-        start = pd.to_datetime(row["status_history"][0]["timestamp"])
-        end = pd.to_datetime(times[-1]["timestamp"])
-        return (end - start).total_seconds() / 3600  # hours
+        return (end - start).total_seconds() / 3600
 
     if len(df) and "status_history" in df.columns:
         df["turnaround_hours"] = df.apply(get_turnaround, axis=1)
@@ -412,20 +425,13 @@ def show_admin():
         st.metric("Avg Turnaround (hrs)", f"{avg_turn:.2f}" if pd.notnull(avg_turn) else "N/A")
 
     st.markdown("---")
-
-    # --- END ANALYTICS/STATISTICS ---
-
-    # Dynamic filter options
     all_reps = sorted(set(s.get("assigned_rep", "") for s in submissions if s.get("assigned_rep")))
     all_providers = sorted(set(s.get("provider_npi", "") for s in submissions))
     all_statuses = sorted(set(s.get("status", "") for s in submissions))
-
     st.sidebar.header("Admin Filters")
-    selected_rep = st.sidebar.selectbox("Filter by Rep", ["All"] + all_reps)
-    selected_provider = st.sidebar.selectbox("Filter by Provider NPI", ["All"] + all_providers)
-    selected_status = st.sidebar.selectbox("Filter by Status", ["All"] + all_statuses)
-
-    # Filter logic
+    selected_rep = st.sidebar.selectbox("Filter by Rep", ["All"] + all_reps, key="admin_filter_rep")
+    selected_provider = st.sidebar.selectbox("Filter by Provider NPI", ["All"] + all_providers, key="admin_filter_provider")
+    selected_status = st.sidebar.selectbox("Filter by Status", ["All"] + all_statuses, key="admin_filter_status")
     filtered_subs = submissions
     if selected_rep != "All":
         filtered_subs = [s for s in filtered_subs if s.get("assigned_rep") == selected_rep]
@@ -433,24 +439,19 @@ def show_admin():
         filtered_subs = [s for s in filtered_subs if s.get("provider_npi") == selected_provider]
     if selected_status != "All":
         filtered_subs = [s for s in filtered_subs if s.get("status") == selected_status]
-
-    # Download as Excel
     if st.button("📥 Download All PA Data as Excel"):
         df = pd.DataFrame(filtered_subs)
         df.to_excel("PA_Requests.xlsx", index=False)
         with open("PA_Requests.xlsx", "rb") as f:
             st.download_button("Download Excel", f, file_name="PA_Requests.xlsx")
-
     st.markdown("## All PA Requests")
     status_choices = ["Submitted", "In Review", "Approved", "Denied"]
     rep_choices = ["Unassigned"] + all_reps
-
     for sub in filtered_subs:
         st.markdown(f"#### Submission ID: `{sub['id']}` | Patient: {sub['patient_name']}")
         st.write(f"**Provider NPI:** {sub['provider_npi']} | **Assigned Rep:** {sub.get('assigned_rep','Unassigned')}")
         st.write(f"**Current Status:** {sub['status']}")
         show_status_timeline(sub["status_history"])
-
         # Assign to rep
         new_rep = st.selectbox(
             f"Assign Rep for {sub['id']}",
@@ -459,16 +460,61 @@ def show_admin():
             key=f"assign_{sub['id']}"
         )
         if st.button(f"Update Assignment for {sub['id']}", key=f"assignbtn_{sub['id']}"):
-            # POST to backend for assignment
             data = {"submission_id": sub['id'], "assigned_rep": new_rep if new_rep != "Unassigned" else ""}
             resp = requests.post(f"{API_BASE}/assign-rep", data=data)
             if resp.status_code == 200:
                 st.success(f"Assigned to {new_rep}")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error(f"Assignment failed: {resp.text}")
-
-        # Update status
+        # ----- MANUAL ELIGIBILITY SECTION -----
+        st.markdown("#### Manual Eligibility Update")
+        eligibility_checked = sub.get("eligibility_checked", False)
+        eligibility_method = sub.get("eligibility_method", "")
+        eligibility_notes = sub.get("eligibility_notes", "")
+        eligibility_evidence = sub.get("eligibility_evidence", [])
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            checked = st.checkbox("Eligibility Checked?", value=eligibility_checked, key=f"admin_checked_{sub['id']}")
+            method = st.selectbox(
+                "Eligibility Method",
+                ["", "Availity", "Phone", "Fax", "Online Portal", "Other"],
+                index=["", "Availity", "Phone", "Fax", "Online Portal", "Other"].index(eligibility_method) if eligibility_method in ["Availity", "Phone", "Fax", "Online Portal", "Other"] else 0,
+                key=f"admin_method_{sub['id']}"
+            )
+        with col2:
+            notes = st.text_area("Eligibility Notes", value=eligibility_notes, height=80, key=f"admin_notes_{sub['id']}")
+        uploaded_files = st.file_uploader(
+            "Upload Eligibility Evidence",
+            accept_multiple_files=True,
+            key=f"admin_evidence_{sub['id']}"
+        )
+        if st.button("Save Eligibility Info", key=f"admin_save_elig_{sub['id']}"):
+            payload = {
+                "submission_id": sub["id"],
+                "eligibility_checked": checked,
+                "eligibility_method": method,
+                "eligibility_notes": notes,
+            }
+            for file in uploaded_files:
+                files = {"file": (file.name, file.getvalue())}
+                data = {"submission_id": sub["id"]}
+                resp = requests.post(f"{API_BASE}/upload-doc", files=files, data=data)
+                if resp.status_code == 200:
+                    st.success(f"Uploaded {file.name}")
+                else:
+                    st.error(f"Failed to upload {file.name}: {resp.text}")
+            resp = requests.post(f"{API_BASE}/update-eligibility", json=payload)
+            if resp.status_code == 200:
+                st.success("Eligibility info updated!")
+            else:
+                st.error(f"Update failed: {resp.text}")
+        if eligibility_evidence:
+            st.write("Uploaded Eligibility Documents:")
+            for doc in eligibility_evidence:
+                st.write(f"- {doc['filename']}")
+        st.write("---")
+        # ----- END MANUAL ELIGIBILITY SECTION -----
         new_status = st.selectbox(
             f"Update status for {sub['id']}",
             status_choices,
@@ -476,7 +522,6 @@ def show_admin():
             key=f"admin_status_{sub['id']}"
         )
         notes = st.text_area(f"Admin notes for {sub['id']}", value=sub.get("admin_notes", ""), key=f"admin_note_{sub['id']}")
-
         if st.button(f"Update Status for {sub['id']}", key=f"admin_update_{sub['id']}"):
             resp = requests.post(
                 f"{API_BASE}/update-status",
@@ -484,29 +529,23 @@ def show_admin():
             )
             if resp.status_code == 200:
                 st.success("Status updated!")
-                st.experimental_rerun()  # Refresh dashboard
+                st.rerun()
             else:
                 st.error("Failed to update status.")
         st.write("---")
-
     st.info("You can filter, assign, and update PA requests for full admin control. Download Excel for offline reporting.")
 
-# ====== RENDER ======
-if auth_page == "🔐 Login Page":
+# ROUTING: Render correct page
+if st.session_state["auth_page"] == "🔐 Login Page":
     show_login()
-elif auth_page == "📝 Register Page":
+elif st.session_state["auth_page"] == "📝 Register Page":
     show_register()
-elif auth_page == "🔒 Confirm Email":
+elif st.session_state["auth_page"] == "🔒 Confirm Email":
     show_confirm()
 
-if dash_page == "👨‍⚕️ Provider Dashboard":
+if st.session_state.get("logged_provider"):
     show_provider()
-elif dash_page == "👥 Rep Dashboard":
+elif st.session_state.get("logged_rep"):
     show_rep()
-elif dash_page == "🛠️ Admin Dashboard":
+elif st.session_state.get("logged_admin"):
     show_admin()
-
-# ====== END OF STREAMLIT APP (FULL MVP UPGRADE) ======
-
-# Place your epochpa_logo.png in the root directory to display branding at the top of all pages.
-# Swap demo login with real authentication when ready for production.

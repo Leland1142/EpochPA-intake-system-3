@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header, Body
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -130,4 +130,30 @@ def assign_rep(
         if s["id"] == submission_id:
             s["assigned_rep"] = assigned_rep if assigned_rep != "Unassigned" else None
             return {"message": f"Assigned rep set to {assigned_rep or 'Unassigned'}."}
+    raise HTTPException(404, "Submission not found.")
+
+# ==============================
+# NEW: Manual Eligibility Update
+# ==============================
+class EligibilityUpdateRequest(BaseModel):
+    submission_id: str
+    eligibility_checked: Optional[bool] = None
+    eligibility_method: Optional[str] = None
+    eligibility_notes: Optional[str] = None
+
+@router.post("/update-eligibility")
+def update_eligibility(req: EligibilityUpdateRequest = Body(...)):
+    """
+    Update manual eligibility info for a PA submission.
+    """
+    for s in _submissions:
+        if s["id"] == req.submission_id:
+            # Update the fields
+            if req.eligibility_checked is not None:
+                s["eligibility_checked"] = req.eligibility_checked
+            if req.eligibility_method is not None:
+                s["eligibility_method"] = req.eligibility_method
+            if req.eligibility_notes is not None:
+                s["eligibility_notes"] = req.eligibility_notes
+            return {"message": "Eligibility info updated.", "submission": s}
     raise HTTPException(404, "Submission not found.")
