@@ -122,21 +122,21 @@ def show_register():
     email = st.text_input("Email")
     pwd = st.text_input("Password", type="password")
     pwd2 = st.text_input("Confirm Password", type="password")
-    if st.button("Sign Up"):
-        if pwd != pwd2:
-            st.error("Passwords must match")
+if st.button("Sign Up"):
+    if pwd != pwd2:
+        st.error("Passwords must match")
+    else:
+        payload = {"email": email, "password": pwd, "role": role, "username": username}
+        resp = requests.post(f"{API_BASE}/auth/register", json=payload)
+        if resp.status_code == 201:
+            st.success("Registration accepted — check your email to confirm.")
         else:
-            payload = {"email": email, "password": pwd, "role": role, "username": username}
-            resp = requests.post(f"{API_BASE}/auth/register", json=payload)
-                if resp.status_code == 201:
-    st.success("Registration accepted — check your email to confirm.")
-else:
-    # Robust error parsing
-    try:
-        err_detail = resp.json()
-    except Exception:
-        err_detail = resp.text
-    st.error(f"Registration failed: {err_detail}")
+            # Robust error parsing
+            try:
+                err_detail = resp.json()
+            except Exception:
+                err_detail = resp.text
+            st.error(f"Registration failed: {err_detail}")
 
 
 def show_confirm():
