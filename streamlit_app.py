@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000/intake")
+API_BASE = os.getenv("API_BASE", "https://epochpa-app.onrender.com/")
 LOGO_PATH = "epochpa_logo.png"
 
 st.set_page_config(page_title="EpochPA", page_icon="🏥", layout="wide")
