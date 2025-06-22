@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-API_BASE = os.getenv("API_BASE", "https://epochpa-app.onrender.com/")
+API_BASE = os.getenv("API_BASE", "https://epochpa-app.onrender.com")
 LOGO_PATH = "epochpa_logo.png"
 
 st.set_page_config(page_title="EpochPA", page_icon="🏥", layout="wide")
@@ -20,13 +20,11 @@ st.sidebar.title("EpochPA")
 show_logo()
 st.sidebar.subheader("Authentication")
 
-# Sidebar state
 if "auth_page" not in st.session_state:
     st.session_state["auth_page"] = "🔐 Login Page"
 if "dash_page" not in st.session_state:
     st.session_state["dash_page"] = "🛠️ Admin Dashboard"
 
-# Session State Defaults
 if "logged_provider" not in st.session_state:
     st.session_state.logged_provider = False
     st.session_state.logged_rep = False
@@ -36,7 +34,6 @@ if "logged_provider" not in st.session_state:
     st.session_state.username = None
     st.session_state.rep_last_seen = dict()
 
-# Sidebar radios
 auth_page = st.sidebar.radio(
     "Go to:",
     ["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"],
@@ -70,22 +67,14 @@ def status_count(subs):
 def show_register():
     show_logo()
     st.title("📝 EpochPA Registration")
-    role = st.selectbox("Select Role", ["provider", "rep"])
-    username = st.text_input("Username (will be your login)")
-    email = st.text_input("Email")
-    pwd = st.text_input("Password", type="password")
-    pwd2 = st.text_input("Confirm Password", type="password")
-    
-    # Use Streamlit form for clean UX
     with st.form("register_form"):
-        # Move all inputs INSIDE the form if you want validation inside
         form_role = st.selectbox("Select Role", ["provider", "rep"], key="form_role")
         form_username = st.text_input("Username (will be your login)", key="form_username")
         form_email = st.text_input("Email", key="form_email")
         form_pwd = st.text_input("Password", type="password", key="form_pwd")
         form_pwd2 = st.text_input("Confirm Password", type="password", key="form_pwd2")
         submit = st.form_submit_button("Sign Up")
-        
+
         if submit:
             if form_pwd != form_pwd2:
                 st.error("Passwords must match")
@@ -108,7 +97,6 @@ def show_register():
                 except Exception as e:
                     st.error(f"Request error: {e}")
 
-
 def show_confirm():
     show_logo()
     st.title("🔒 Confirm Email")
@@ -119,6 +107,30 @@ def show_confirm():
             st.success("Email confirmed! You can now log in.")
         else:
             st.error(f"Confirmation failed: {resp.json()}")
+
+def show_login():
+    show_logo()
+    st.title("🔐 EpochPA Login")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    role = st.selectbox("Role", ["provider", "rep", "admin"])
+    if st.button("Login"):
+        try:
+            payload = {"email": email, "password": password}
+            resp = requests.post(f"{API_BASE}/auth/login", json=payload)
+            if resp.status_code == 200:
+                user_data = resp.json().get("user", {})
+                st.session_state.email = user_data.get("email")
+                st.session_state.role = user_data.get("role")
+                st.session_state.username = user_data.get("email")
+                st.session_state.logged_provider = user_data.get("role") == "provider"
+                st.session_state.logged_rep = user_data.get("role") == "rep"
+                st.session_state.logged_admin = user_data.get("role") == "admin"
+                st.success(f"Logged in as {user_data.get('role')}.")
+            else:
+                st.error("Login failed. Please check your credentials.")
+        except Exception as e:
+            st.error(f"Request error: {e}")
 
 def show_provider():
     show_logo()
@@ -204,7 +216,6 @@ def show_provider():
                     st.success(f"Uploaded {f.name}")
                 else:
                     st.error(f"Failed to upload {f.name}: {resp.text}")
-        # ----- SHOW ELIGIBILITY INFO (read-only for providers) -----
         st.subheader("Eligibility Verification (for this PA request)")
         st.write(f"Checked: {sub.get('eligibility_checked', False)}")
         st.write(f"Method: {sub.get('eligibility_method', '')}")
@@ -281,7 +292,6 @@ def show_rep():
         st.write(f"**Provider NPI:** {sub['provider_npi']}")
         st.write(f"**Current Status:** {sub['status']}")
         show_status_timeline(sub["status_history"])
-        # ----- MANUAL ELIGIBILITY SECTION -----
         st.markdown("#### Manual Eligibility Update")
         eligibility_checked = sub.get("eligibility_checked", False)
         eligibility_method = sub.get("eligibility_method", "")
@@ -328,7 +338,6 @@ def show_rep():
             for doc in eligibility_evidence:
                 st.write(f"- {doc['filename']}")
         st.write("---")
-        # ----- END MANUAL ELIGIBILITY SECTION -----
         new_status = st.selectbox(
             f"Update status for {sub['id']}",
             ["Submitted", "In Review", "Approved", "Denied"],
@@ -428,7 +437,6 @@ def show_admin():
         st.write(f"**Provider NPI:** {sub['provider_npi']} | **Assigned Rep:** {sub.get('assigned_rep','Unassigned')}")
         st.write(f"**Current Status:** {sub['status']}")
         show_status_timeline(sub["status_history"])
-        # Assign to rep
         new_rep = st.selectbox(
             f"Assign Rep for {sub['id']}",
             rep_choices,
@@ -443,7 +451,6 @@ def show_admin():
                 st.rerun()
             else:
                 st.error(f"Assignment failed: {resp.text}")
-        # ----- MANUAL ELIGIBILITY SECTION -----
         st.markdown("#### Manual Eligibility Update")
         eligibility_checked = sub.get("eligibility_checked", False)
         eligibility_method = sub.get("eligibility_method", "")
@@ -490,7 +497,6 @@ def show_admin():
             for doc in eligibility_evidence:
                 st.write(f"- {doc['filename']}")
         st.write("---")
-        # ----- END MANUAL ELIGIBILITY SECTION -----
         new_status = st.selectbox(
             f"Update status for {sub['id']}",
             status_choices,
