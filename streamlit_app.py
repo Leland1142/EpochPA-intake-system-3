@@ -117,26 +117,43 @@ def show_login():
 def show_register():
     show_logo()
     st.title("📝 EpochPA Registration")
-    role = st.selectbox("Select Role", ["provider", "rep", "admin"])
+    role = st.selectbox("Select Role", ["provider", "rep"])
     username = st.text_input("Username (will be your login)")
     email = st.text_input("Email")
     pwd = st.text_input("Password", type="password")
     pwd2 = st.text_input("Confirm Password", type="password")
-if st.button("Sign Up"):
-    if pwd != pwd2:
-        st.error("Passwords must match")
-    else:
-        payload = {"email": email, "password": pwd, "role": role, "username": username}
-        resp = requests.post(f"{API_BASE}/auth/register", json=payload)
-        if resp.status_code == 201:
-            st.success("Registration accepted — check your email to confirm.")
-        else:
-            # Robust error parsing
-            try:
-                err_detail = resp.json()
-            except Exception:
-                err_detail = resp.text
-            st.error(f"Registration failed: {err_detail}")
+    
+    # Use Streamlit form for clean UX
+    with st.form("register_form"):
+        # Move all inputs INSIDE the form if you want validation inside
+        form_role = st.selectbox("Select Role", ["provider", "rep"], key="form_role")
+        form_username = st.text_input("Username (will be your login)", key="form_username")
+        form_email = st.text_input("Email", key="form_email")
+        form_pwd = st.text_input("Password", type="password", key="form_pwd")
+        form_pwd2 = st.text_input("Confirm Password", type="password", key="form_pwd2")
+        submit = st.form_submit_button("Sign Up")
+        
+        if submit:
+            if form_pwd != form_pwd2:
+                st.error("Passwords must match")
+            else:
+                payload = {
+                    "email": form_email,
+                    "password": form_pwd,
+                    "role": form_role,
+                    "username": form_username
+                }
+                try:
+                    resp = requests.post(f"{API_BASE}/auth/register", json=payload)
+                    if resp.status_code == 201:
+                        st.success("Registration accepted — check your email to confirm.")
+                    else:
+                        try:
+                            st.error(f"Registration failed: {resp.json()}")
+                        except Exception:
+                            st.error(f"Registration failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"Request error: {e}")
 
 
 def show_confirm():
