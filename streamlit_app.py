@@ -67,53 +67,6 @@ def compute_turnaround(sub):
 def status_count(subs):
     return pd.Series([s["status"] for s in subs]).value_counts() if subs else pd.Series()
 
-def show_login():
-    show_logo()
-    st.title("🔐 EpochPA Login")
-    # --- Register Now button ---
-    if st.button("Register Now"):
-        st.session_state["auth_page"] = "📝 Register Page"
-        st.rerun()
-    username = st.text_input("Username (for rep/provider login)")
-    pwd = st.text_input("Password", type="password")
-    role = st.selectbox("Login as...", ["provider", "rep", "admin"])
-
-    if st.button("Login"):
-        # Hardcoded admin credentials
-        if username == "leland.paul@epochpa.com" and pwd == "Takeoff#11" and role == "admin":
-            st.session_state.username = username
-            st.session_state.logged_admin = True
-            st.session_state.logged_rep = False
-            st.session_state.logged_provider = False
-            st.session_state.role = "admin"
-            st.success("Admin login successful.")
-            st.session_state["dash_page"] = "🛠️ Admin Dashboard"
-            st.rerun()
-        else:
-            payload = {"email": username, "password": pwd}
-            try:
-                resp = requests.post(f"{API_BASE}/auth/login", json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    st.session_state.username = username
-                    st.session_state.email = username
-                    st.session_state.logged_provider = role == "provider"
-                    st.session_state.logged_rep = role == "rep"
-                    st.session_state.logged_admin = role == "admin"
-                    st.session_state.role = role
-                    st.session_state["availity_token"] = data.get("availity_access_token")
-                    st.success(f"Logged in as {role} ({username})")
-                    if role == "rep":
-                        st.session_state.rep_last_seen[username] = datetime.utcnow().isoformat()
-                    if role == "admin":
-                        st.session_state["dash_page"] = "🛠️ Admin Dashboard"
-                        st.rerun()
-                else:
-                    st.error(resp.json().get("detail", "Login failed."))
-            except Exception as e:
-                st.error(f"Login error: {e}")
-        return
-
 def show_register():
     show_logo()
     st.title("📝 EpochPA Registration")
