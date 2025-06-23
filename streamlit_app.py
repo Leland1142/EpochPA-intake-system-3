@@ -36,10 +36,11 @@ if "logged_provider" not in st.session_state:
 
 auth_page = st.sidebar.radio(
     "Go to:",
-    ["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"],
-    index=["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"].index(st.session_state["auth_page"]),
+    ["🔐 Login Page", "🔒 Confirm Email"],
+    index=["🔐 Login Page", "🔒 Confirm Email"].index(st.session_state["auth_page"]),
     key="auth_nav"
 )
+
 dash_page = st.sidebar.radio(
     "Go to:",
     ["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"],
@@ -131,6 +132,14 @@ def show_login():
                 st.error("Login failed. Please check your credentials.")
         except Exception as e:
             st.error(f"Request error: {e}")
+
+    # <-- This is now outside the if and except blocks!
+    st.write("---")
+    if st.button("Register Now"):
+        st.session_state["auth_page"] = "📝 Register Page"
+        st.experimental_rerun()
+
+
 
 def show_provider():
     show_logo()
