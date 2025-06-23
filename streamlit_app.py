@@ -137,7 +137,8 @@ def show_login():
     st.write("---")
     if st.button("Register Now"):
         st.session_state["auth_page"] = "📝 Register Page"
-        st.experimental_rerun()
+        st.rerun()
+
 
 
 
