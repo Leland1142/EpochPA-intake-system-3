@@ -34,11 +34,14 @@ if "logged_provider" not in st.session_state:
     st.session_state.username = None
     st.session_state.rep_last_seen = dict()
 
+auth_pages = ["🔐 Login Page", "📝 Register Page", "🔒 Confirm Email"]
 auth_page = st.sidebar.radio(
     "Go to:",
-    ["🔐 Login Page", "🔒 Confirm Email"],
-    index=["🔐 Login Page", "🔒 Confirm Email"].index(st.session_state["auth_page"]),
+    auth_pages,
+    index=auth_pages.index(st.session_state["auth_page"]),
     key="auth_nav"
+)
+
 )
 
 dash_page = st.sidebar.radio(
