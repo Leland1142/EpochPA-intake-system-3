@@ -42,14 +42,14 @@ auth_page = st.sidebar.radio(
     key="auth_nav"
 )
 
-)
-
+dash_pages = ["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"]
 dash_page = st.sidebar.radio(
     "Go to:",
-    ["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"],
-    index=["👨‍⚕️ Provider Dashboard", "👥 Rep Dashboard", "🛠️ Admin Dashboard"].index(st.session_state["dash_page"]),
+    dash_pages,
+    index=dash_pages.index(st.session_state["dash_page"]),
     key="dash_nav"
 )
+
 
 def show_status_timeline(status_history):
     st.markdown("**Status Timeline:**")
