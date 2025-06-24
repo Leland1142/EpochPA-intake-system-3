@@ -95,7 +95,7 @@ def show_register():
                     "role": form_role,
                     "username": form_username
                 }
-                try:
+try:
     resp = requests.post(f"{API_BASE}/auth/register", json=payload)
     # DEBUG: Show the API response in the UI
     st.write("Status code:", resp.status_code)
@@ -113,6 +113,7 @@ def show_register():
             st.error(f"Registration failed: {resp.text}")
 except Exception as e:
     st.error(f"Request error: {e}")
+
 
 
 
