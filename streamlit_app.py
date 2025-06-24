@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # This loads .env file values into environment variables
+
 import streamlit as st
 import requests
 import pandas as pd
