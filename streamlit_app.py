@@ -95,24 +95,24 @@ def show_register():
                     "role": form_role,
                     "username": form_username
                 }
-try:
-    resp = requests.post(f"{API_BASE}/auth/register", json=payload)
-    # DEBUG: Show the API response in the UI
-    st.write("Status code:", resp.status_code)
-    st.write("Response text:", resp.text)
-    try:
-        st.write("Response JSON:", resp.json())
-    except Exception:
-        pass
-    if resp.status_code == 201:
-        st.success("Registration accepted — check your email to confirm.")
-    else:
-        try:
-            st.error(f"Registration failed: {resp.json()}")
-        except Exception:
-            st.error(f"Registration failed: {resp.text}")
-except Exception as e:
-    st.error(f"Request error: {e}")
+                try:
+                    resp = requests.post(f"{API_BASE}/auth/register", json=payload)
+                    # DEBUG output
+                    st.write("Status code:", resp.status_code)
+                    st.write("Response text:", resp.text)
+                    try:
+                        st.write("Response JSON:", resp.json())
+                    except Exception:
+                        pass
+                    if resp.status_code == 201:
+                        st.success("Registration accepted — check your email to confirm.")
+                    else:
+                        try:
+                            st.error(f"Registration failed: {resp.json()}")
+                        except Exception:
+                            st.error(f"Registration failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"Request error: {e}")
 
 
 
