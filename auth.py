@@ -77,7 +77,7 @@ def register(req: RegisterRequest):
         "confirmed": False
     }
     # Build confirmation link (adjust URL to your frontend confirm page)
-    confirm_url = f"https://epochpa.com/confirm?token={token}"
+    confirm_url = f"https://epochpa-backend.onrender.com/intake/auth/confirm?token={token}"
     # Email customization by role
     if req.role == "provider":
         subject = "Confirm your Provider Registration with EpochPA"
