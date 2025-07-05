@@ -9,7 +9,11 @@ app = FastAPI(title="EpochPA API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://epochpa-intake-system-3-sdk3jwsvemc7olkziw83ie.streamlit.app",
+        "https://www.epochpa.com",
+        "https://epochpa.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,7 +46,6 @@ async def homepage():
             </style>
         </head>
         <body>
-            <!-- Insert your logo file path here, e.g. /static/epochpa_logo.png -->
             <!-- <img class="logo" src="/static/epochpa_logo.png" alt="EpochPA Logo"/> -->
             <h1>Welcome to EpochPA</h1>
             <p style="font-size:1.1rem;color:#444;">Click below to access your provider dashboard and submit prior authorization requests.</p>
