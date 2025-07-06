@@ -7,3 +7,6 @@ pydantic
 gunicorn
 email-validator
 python-multipart
+sqlmodel
+SQLAlchemy>=2.0.14
+pydantic>=1.10.13
