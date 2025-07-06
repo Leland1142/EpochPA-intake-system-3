@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel, EmailStr
+from fastapi.responses import HTMLResponse
 import secrets
 import requests
 import os
@@ -24,7 +25,6 @@ EMAIL_FROM = "leland.paul@epochpa.com"  # Your company email
 
 def send_email_brevo(recipient, subject, html_content, text_content=None):
     api_key = BREVO_API_KEY
-    print("BREVO_API_KEY:", api_key)  # DEBUG: REMOVE after working
     url = "https://api.brevo.com/v3/smtp/email"
     payload = {
         "sender": {"name": "EpochPA", "email": EMAIL_FROM},
@@ -41,7 +41,6 @@ def send_email_brevo(recipient, subject, html_content, text_content=None):
     }
     try:
         response = requests.post(url, json=payload, headers=headers)
-        print("Brevo response:", response.status_code, response.text)
         return response.status_code in (200, 201, 202)
     except Exception as e:
         print("Brevo error:", str(e))
@@ -76,7 +75,7 @@ def register(req: RegisterRequest):
         "role": req.role,
         "confirmed": False
     }
-    # Build confirmation link (adjust URL to your frontend confirm page)
+    # Build confirmation link
     confirm_url = f"https://epochpa-backend.onrender.com/intake/auth/confirm?token={token}"
     # Email customization by role
     if req.role == "provider":
@@ -104,10 +103,29 @@ def register(req: RegisterRequest):
         raise HTTPException(500, "Registration failed: could not send confirmation email. Please contact support.")
 
     return {
-        "message": "Registration accepted — check your email to confirm.",
-        # "dev_token": token  # Optionally return for testing only; remove in production!
+        "message": "Registration accepted — check your email to confirm."
     }
 
+# --------- GET: EMAIL CONFIRMATION LINK HANDLER ---------
+@router.get("/auth/confirm", response_class=HTMLResponse)
+async def confirm_email(token: str = Query(...)):
+    email = _tokens.get(token)
+    if not email or email not in _users:
+        return HTMLResponse(
+            "<h2>Invalid or expired token.</h2>", status_code=400
+        )
+    _users[email]["confirmed"] = True
+    return """
+    <html>
+        <head><title>EpochPA – Email Confirmed</title></head>
+        <body>
+            <h2>Email Confirmed!</h2>
+            <p>Your provider account is now active. You can <a href="https://epochpa-intake-system-3-sdk3jwsvemc7olkziw83ie.streamlit.app/">log in here</a>.</p>
+        </body>
+    </html>
+    """
+
+# --------- POST: MANUAL CONFIRMATION (for Streamlit form) ---------
 @router.post("/auth/confirm")
 def confirm(req: ConfirmRequest):
     email = _tokens.get(req.token)
