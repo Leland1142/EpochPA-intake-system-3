@@ -152,27 +152,37 @@ def confirm_post(req: ConfirmRequest):
 
 @router.post("/auth/login")
 def login(req: LoginRequest):
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.email == req.email)).first()
-        if not user or user.password != req.password:
-            raise HTTPException(401, "Invalid credentials.")
-        if not user.confirmed:
-            raise HTTPException(403, "Email not confirmed.")
-        # Get Availity OAuth2 token (leave as-is for now)
-        data = {
-            "grant_type": "client_credentials",
-            "client_id": AVAILITY_CLIENT_ID,
-            "client_secret": AVAILITY_CLIENT_SECRET,
-            "scope": "hipaa"
-        }
-        resp = requests.post(AVAILITY_TOKEN_URL, data=data)
-        if resp.status_code != 200:
-            raise HTTPException(500, f"Failed to get Availity token: {resp.text}")
-        availity_token = resp.json().get("access_token")
-        return {
-            "user": {
-                "email": req.email,
-                "role": user.role
-            },
-            "availity_access_token": availity_token
-        }
+    print("LOGIN ATTEMPT:", req.email, req.password)  # Debug print
+    try:
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.email == req.email)).first()
+            print("FOUND USER:", user)  # Debug print
+            if not user or user.password != req.password:
+                print("LOGIN FAILED for:", req.email)  # Debug print
+                raise HTTPException(401, "Invalid credentials.")
+            if not user.confirmed:
+                print("LOGIN NOT CONFIRMED for:", req.email)  # Debug print
+                raise HTTPException(403, "Email not confirmed.")
+            # Get Availity OAuth2 token (leave as-is for now)
+            data = {
+                "grant_type": "client_credentials",
+                "client_id": AVAILITY_CLIENT_ID,
+                "client_secret": AVAILITY_CLIENT_SECRET,
+                "scope": "hipaa"
+            }
+            resp = requests.post(AVAILITY_TOKEN_URL, data=data)
+            if resp.status_code != 200:
+                print("AVAILITY TOKEN FAILED:", resp.text)  # Debug print
+                raise HTTPException(500, f"Failed to get Availity token: {resp.text}")
+            availity_token = resp.json().get("access_token")
+            print("LOGIN SUCCESSFUL for:", req.email)  # Debug print
+            return {
+                "user": {
+                    "email": req.email,
+                    "role": user.role
+                },
+                "availity_access_token": availity_token
+            }
+    except Exception as e:
+        print("EXCEPTION DURING LOGIN:", repr(e))  # Exception print
+        raise
