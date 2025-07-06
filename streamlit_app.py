@@ -8,7 +8,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-API_BASE = os.getenv("API_BASE", "https://epochpa-app.onrender.com").strip()
+API_BASE = "https://epochpa-backend.onrender.com/intake"
 print(f"API_BASE loaded as: '{API_BASE}'")
 
 LOGO_PATH = "epochpa_logo.png"
